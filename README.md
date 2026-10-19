@@ -59,6 +59,4 @@ This project helped me practice data loading, data filtering, data quality check
 - Deploy the dashboard online.
 - Add unit tests and more advanced analytics.
 
-## Author
-B.Tech Computer Science Engineering Student
 
