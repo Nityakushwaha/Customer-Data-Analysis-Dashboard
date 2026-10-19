@@ -1,50 +1,64 @@
-
 # Customer Data Analysis Dashboard
 
 ## Project Overview
-This project is an interactive dashboard built with Python and Streamlit to explore customer data and understand customer distribution and subscription trends.
+The Customer Data Analysis Dashboard is an interactive data analytics project built using Python and Streamlit. It helps users explore customer records, analyze country-wise customer distribution, review subscription dates, and identify useful business insights.
 
-## Features
-- Interactive country filters
-- Customer KPI metrics
-- Country-wise customer analysis
-- Monthly subscription trend visualization
-- Customer records table
-- CSV download functionality
-- Basic data insights
+## Objectives
+- Analyze customer records using Python.
+- Explore customers by country, city, and company.
+- Visualize customer distribution and subscription trends.
+- Filter records using country, subscription date, and customer search.
+- Preview missing values and duplicate records.
+- Export filtered customer data to CSV and Excel.
 
 ## Technologies Used
 - Python
 - Pandas
-- Matplotlib
 - Streamlit
+- Matplotlib
+- Plotly
+- OpenPyXL
+
+## Key Features
+1. Interactive dashboard and KPI cards.
+2. Country and subscription date filters.
+3. Customer search functionality.
+4. Country-wise charts and subscription visualizations.
+5. Pie and donut charts.
+6. Customer segmentation.
+7. Business insights.
+8. Data quality score and cleaning preview.
+9. Selectable columns in the Data Explorer.
+10. CSV and Excel export.
 
 ## Dataset
-The project uses a customer CSV dataset named `customers-100.csv`.
+The project uses `customers-100.csv`, which contains customer-related information such as names, email addresses, country, city, company, and subscription dates.
 
 ## How to Run the Project
 
 1. Install Python.
-2. Open the project folder in VS Code.
-3. Install the required libraries:
+2. Install the required libraries:
 
    ```bash
-   pip install streamlit pandas matplotlib
+   python -m pip install streamlit pandas matplotlib plotly openpyxl
    ```
 
+3. Open the project folder in the terminal.
 4. Run the dashboard:
 
    ```bash
-   python -m streamlit run dashboard1.py
+   streamlit run dashboard.py
    ```
 
-5. Open the local URL displayed in the terminal.
-
 ## Learning Outcomes
-- Data cleaning and preprocessing
-- Data filtering with Pandas
-- Data visualization with Matplotlib
-- Interactive dashboard development using Streamlit
+This project helped me practice data loading, data filtering, data quality checks, data visualization, exploratory data analysis, and interactive dashboard development.
 
-## Project Status
-Completed — basic dashboard features tested locally.
+## Future Improvements
+- Add more datasets.
+- Improve automated reporting.
+- Deploy the dashboard online.
+- Add unit tests and more advanced analytics.
+
+## Author
+B.Tech Computer Science Engineering Student
+
