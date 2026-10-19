@@ -3,8 +3,15 @@ import os
 import pandas as pd
 import streamlit as st
 import matplotlib.pyplot as plt
+import plotly.express as px 
 
-
+# ---------- PAGE CONFIGURATION ----------
+st.set_page_config(
+    page_title="Customer Data Analysis ",
+    page_icon="📊",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
 # ---------- PROFESSIONAL DASHBOARD DESIGN ----------
 st.markdown("""
@@ -32,391 +39,23 @@ st.markdown("""
         font-weight: 700;
     }
 
-    div[data-testid="stVerticalBlock"] > div:has(> div.stButton) {
-        gap: 0.5rem;
-    }
-
-    h1, h2, h3 {
-        letter-spacing: -0.4px;
-    }
-
     [data-testid="stSidebar"] {
         border-right: 1px solid rgba(128, 128, 128, 0.2);
     }
 </style>
 """, unsafe_allow_html=True)
 
-
-# ---------- LOAD DATA ----------
-@st.cache_data
-def load_data():
-    path = os.path.join(
-        os.path.dirname(os.path.abspath(__file__)),
-        "customers-100.csv"
-    )
-    data = pd.read_csv(path)
-    data.columns = data.columns.str.strip()
-    data["Subscription Date"] = pd.to_datetime(
-        data["Subscription Date"], errors="coerce"
-    )
-    return data
-
-try:
-    df = load_data()
-except Exception as e:
-    st.error(f"Could not load the dataset: {e}")
-    st.stop()
-
-# ---------- DESIGN ----------
-st.markdown("""
-<style>
-.block-container {padding-top: 2rem; padding-bottom: 2rem;}
-[data-testid="stMetric"] {
-    background: var(--secondary-background-color);
-    padding: 18px;
-    border-radius: 12px;
-    border: 1px solid rgba(128,128,128,0.2);
-}
-</style>
-""", unsafe_allow_html=True)
-
-st.title("📊 Customer Data Analysis")
-st.caption("Customer data • Business insights • AI-powered analysis")
-
-# ---------- SIDEBAR FILTERS ----------
-st.sidebar.title("🔎 Dashboard Filters")
-
-countries = sorted(df["Country"].dropna().unique())
-selected_countries = st.sidebar.multiselect(
-    "Select countries",
-    countries,
-    default=countries
-)
-
-search = st.sidebar.text_input("Search customer or company")
-
-filtered = df[df["Country"].isin(selected_countries)].copy()
-
-if search:
-    mask = (
-        filtered["First Name"].fillna("").astype(str)
-        + " "
-        + filtered["Last Name"].fillna("").astype(str)
-        + " "
-        + filtered["Company"].fillna("").astype(str)
-        + " "
-        + filtered["Email"].fillna("").astype(str)
-    ).str.contains(search, case=False, na=False)
-
-    filtered = filtered[mask]
-
-
-# ---------- PROFESSIONAL BUSINESS OVERVIEW ----------
-st.subheader("📌 Business Overview")
-
-total_customers = len(filtered)
-total_countries = filtered["Country"].nunique()
-total_companies = filtered["Company"].nunique()
-total_cities = filtered["City"].nunique()
-
-k1, k2, k3, k4 = st.columns(4)
-
-with k1:
-    st.metric(
-        label="👥 Total Customers",
-        value=f"{total_customers:,}"
-    )
-
-with k2:
-    st.metric(
-        label="🌍 Countries",
-        value=f"{total_countries:,}"
-    )
-
-with k3:
-    st.metric(
-        label="🏢 Companies",
-        value=f"{total_companies:,}"
-    )
-
-with k4:
-    st.metric(
-        label="🏙️ Cities",
-        value=f"{total_cities:,}"
-    )
-
-st.caption("Metrics update automatically when you change the sidebar filters.")
-st.divider()
-
-# ---------- CHARTS ----------
-left, right = st.columns(2)
-
-with left:
-    st.subheader("🌍 Customers by Country")
-    country_counts = filtered["Country"].value_counts().head(10)
-
-    if not country_counts.empty:
-        fig, ax = plt.subplots(figsize=(8, 5))
-        country_counts.sort_values().plot(
-            kind="barh", ax=ax
-        )
-        ax.set_xlabel("Number of Customers")
-        ax.set_ylabel("")
-        fig.tight_layout()
-        st.pyplot(fig)
-        plt.close(fig)
-    else:
-        st.info("No country data for this filter.")
-
-with right:
-    st.subheader("📅 Subscription Trend")
-
-    dates = filtered.dropna(subset=["Subscription Date"])
-
-    if not dates.empty:
-        monthly = (
-            dates.set_index("Subscription Date")
-            .resample("MS")
-            .size()
-        )
-
-        fig, ax = plt.subplots(figsize=(8, 5))
-        monthly.plot(kind="bar", ax=ax)
-        ax.set_xlabel("Subscription Month")
-        ax.set_ylabel("New Subscriptions")
-        ax.tick_params(axis="x", labelrotation=60)
-        fig.tight_layout()
-        st.pyplot(fig)
-        plt.close(fig)
-    else:
-        st.info("No valid subscription dates.")
-
-st.divider()
-
-# ---------- AI INSIGHTS ----------
-st.subheader("🤖 Customer Insights Assistant")
-st.write(
-    "Generate data-based insights or ask AI to analyze your customers."
-)
-
-if st.button("✨ Generate Quick Insights"):
-    if filtered.empty:
-        st.warning("No customer records match your filters.")
-    else:
-        top_country = filtered["Country"].value_counts()
-
-        st.markdown("**Key findings**")
-        st.write(f"- Analyzed {len(filtered)} customer records.")
-        st.write(
-            f"- Found {filtered['Country'].nunique()} countries "
-            "in the filtered data."
-        )
-        st.write(
-            f"- Found {filtered['Company'].nunique()} distinct companies."
-        )
-
-        if not top_country.empty:
-            st.write(
-                f"- Most represented country: **{top_country.index[0]}** "
-                f"({top_country.iloc[0]} customers)."
-            )
-
-        st.caption(
-            "These are rule-based insights generated by Python, "
-            "not responses from a generative AI model."
-        )
-
-# ---------- CUSTOMER TABLE ----------
-st.divider()
-st.subheader("👥 Customer Records")
-
-
-st.dataframe(
-    df,
-    width="stretch",
-    hide_index=True
-)
-
-
-st.download_button(
-    "⬇️ Download Filtered CSV",
-    data=filtered.to_csv(index=False).encode("utf-8"),
-    file_name="filtered_customers.csv",
-    mime="text/csv"
-)
-
-
-
-# Automatic Customer Insights
-st.subheader("📊 Customer Insights")
-
-total_customers = len(df)
-total_countries = df["Country"].nunique()
-
-st.write(f"👥 Total customers: {total_customers}")
-st.write(f"🌍 Total countries: {total_countries}")
-
-# Country with maximum customers
-country_counts = df["Country"].value_counts()
-
-if not country_counts.empty:
-    top_country = country_counts.index[0]
-    top_count = country_counts.iloc[0]
-
-    st.success(
-        f"Most customers are from {top_country} "
-        f"({top_count} customers)."
-    )
-
-# Subscription date insights
-df["Subscription Date"] = pd.to_datetime(
-    df["Subscription Date"], errors="coerce"
-)
-
-valid_dates = df["Subscription Date"].dropna()
-
-if not valid_dates.empty:
-    latest_date = valid_dates.max()
-    earliest_date = valid_dates.min()
-
-    st.write(f"📅 Earliest subscription: {earliest_date.date()}")
-    st.write(f"📅 Latest subscription: {latest_date.date()}")
-
-    monthly_subscriptions = (
-        valid_dates.dt.to_period("M").value_counts().sort_index()
-    )
-
-    st.write("📈 Monthly subscription counts")
-    st.bar_chart(monthly_subscriptions)
-
-
-
-# ---------- PROFESSIONAL INTERACTIVE CHARTS ----------
-st.header("📊 Professional Data Visualization")
-
-left, right = st.columns(2)
-
-with left:
-    st.subheader("🌍 Top 10 Countries by Customers")
-
-    country_data = (
-        filtered["Country"]
-        .value_counts()
-        .head(10)
-        .sort_values()
-    )
-
-    if not country_data.empty:
-        fig, ax = plt.subplots(figsize=(8, 5))
-        country_data.plot(kind="barh", ax=ax)
-        ax.set_xlabel("Number of Customers")
-        ax.set_ylabel("")
-        ax.set_title("Customer Distribution by Country")
-        fig.tight_layout()
-        st.pyplot(fig)
-        plt.close(fig)
-    else:
-        st.info("No country data available.")
-
-with right:
-    st.subheader("📈 Monthly Subscription Trend")
-
-    subscription_dates = filtered["Subscription Date"].dropna()
-
-    if not subscription_dates.empty:
-        monthly_data = (
-            subscription_dates
-            .dt.to_period("M")
-            .value_counts()
-            .sort_index()
-        )
-
-        monthly_data.index = monthly_data.index.astype(str)
-        st.line_chart(monthly_data)
-    else:
-        st.info("No valid subscription dates found.")
-
-# ----------------------------------
-# Customer Data Chat Assistant
-# ----------------------------------
-
-st.header("💬 Customer Data Chat Assistant")
-
+# ---------- DASHBOARD HEADER ----------
+st.title("📊 Customer Data Analysis Dashboard")
 st.caption(
-    "Ask questions about your customer dataset. "
-    "This assistant works without API credits."
+    "Explore customer records, country distribution, "
+    "subscription trends and business insights."
 )
 
-question = st.chat_input(
-    "Ask: Which country has the most customers?"
-)
-
-if question:
-    st.chat_message("user").write(question)
-
-    q = question.lower().strip()
-
-    with st.chat_message("assistant"):
-        if "total customer" in q or "how many customer" in q:
-            st.write(f"Your dataset contains {len(df)} customers.")
-
-        elif "country" in q and ("most" in q or "highest" in q or "top" in q):
-            counts = df["Country"].value_counts()
-
-            if not counts.empty:
-                st.write(
-                    f"The country with the most customers is "
-                    f"{counts.index[0]}, with {counts.iloc[0]} customers."
-                )
-            else:
-                st.write("No country data is available.")
-
-        elif "countr" in q or "countries" in q:
-            countries = sorted(df["Country"].dropna().unique())
-            st.write("Countries in your dataset:")
-            st.write(", ".join(countries))
-
-        elif "subscription" in q or "trend" in q or "month" in q:
-            dates = pd.to_datetime(
-                df["Subscription Date"], errors="coerce"
-            ).dropna()
-
-            if dates.empty:
-                st.write("No valid subscription dates were found.")
-            else:
-                monthly = dates.dt.to_period("M").value_counts().sort_index()
-                st.write(f"Total valid subscription dates: {len(dates)}")
-                st.write(f"Month with the most subscriptions: {monthly.idxmax()}")
-                st.write(f"Subscriptions in that month: {monthly.max()}")
-
-        else:
-            st.write(
-                "I can answer questions about total customers, "
-                "countries, top country, and subscription trends. "
-                "Try asking one of these questions."
-            )
-
-
-
-
-# ---------- CUSTOM DESIGN ----------
-st.markdown("""
-<style>
-.block-container {
-    padding-top: 1.5rem;
-    padding-bottom: 2rem;
-}
-[data-testid="stMetric"] {
-    background: var(--secondary-background-color);
-    padding: 18px;
-    border-radius: 12px;
-    border: 1px solid rgba(128,128,128,0.2);
-}
-</style>
-""", unsafe_allow_html=True)
-
+st.divider()
 
 # ---------- LOAD DATA ----------
+
 @st.cache_data
 def load_data():
     path = os.path.join(
@@ -457,32 +96,253 @@ except Exception as e:
     st.error(f"Could not load the dataset: {e}")
     st.stop()
 
+# Data Quality Report
 
-# ---------- DASHBOARD HEADER ----------
-st.title("📊 Customer Data Analysis Dashboard")
-st.caption(
-    "Explore customer records, country distribution, "
-    "subscription trends and business insights."
+st.header("Data Quality Report")
+
+col1, col2, col3, col4 = st.columns(4)
+
+with col1:
+    st.metric("Total Rows", f"{len(df):,}")
+
+with col2:
+    st.metric("Total Columns", f"{len(df.columns):,}")
+
+with col3:
+    st.metric(
+        "Missing Values",
+        f"{df.isnull().sum().sum():,}"
+    )
+
+with col4:
+    st.metric(
+        "Duplicate Rows",
+        f"{df.duplicated().sum():,}"
+    )
+
+st.subheader("Missing Values by Column")
+
+missing_data = df.isnull().sum()
+missing_data = missing_data[missing_data > 0]
+
+if not missing_data.empty:
+    st.bar_chart(missing_data)
+else:
+    st.success("No missing values found!")
+
+st.subheader("Dataset Preview")
+st.dataframe(df.head(10), use_container_width=True)
+
+
+# ---------- DATA QUALITY SCORE ----------
+st.divider()
+st.header("🎯 Data Quality Score")
+
+# Total number of cells in the dataset
+total_cells = df.shape[0] * df.shape[1]
+
+# Count missing cells
+missing_cells = int(df.isnull().sum().sum())
+
+# Count duplicate rows
+duplicate_rows = int(df.duplicated().sum())
+
+# Calculate missing-value rate and duplicate-row rate
+missing_rate = (
+    missing_cells / total_cells * 100
+    if total_cells > 0 else 0
 )
 
-st.divider()
+duplicate_rate = (
+    duplicate_rows / len(df) * 100
+    if len(df) > 0 else 0
+)
 
-# ---------- BUSINESS OVERVIEW ----------
+# Calculate overall score
+quality_score = max(
+    0,
+    100 - missing_rate - duplicate_rate
+)
+
+# Display results
+q1, q2, q3 = st.columns(3)
+
+with q1:
+    st.metric(
+        "Overall Quality Score",
+        f"{quality_score:.2f}%"
+    )
+
+with q2:
+    st.metric(
+        "Missing Values",
+        f"{missing_cells:,}",
+        delta=f"{missing_rate:.2f}% of all cells",
+        delta_color="inverse"
+    )
+
+with q3:
+    st.metric(
+        "Duplicate Rows",
+        f"{duplicate_rows:,}",
+        delta=f"{duplicate_rate:.2f}% of rows",
+        delta_color="inverse"
+    )
+
+# Progress bar
+st.progress(int(round(quality_score)))
+
+# Explain the score
+if quality_score >= 90:
+    st.success("Good dataset quality! Only limited cleaning may be needed.")
+elif quality_score >= 70:
+    st.warning("Moderate dataset quality. Review missing values and duplicates.")
+else:
+    st.error("Dataset needs cleaning before further analysis.")
+
+st.caption(
+    "Score formula: 100 − missing-cell percentage − duplicate-row percentage. "
+    "This is a simple project-specific indicator, not a universal data-quality standard."
+)
+
+# ---------- SIDEBAR FILTERS ----------
+st.sidebar.title("🔎 Dashboard Filters")
+
+# Country filter
+countries = sorted(df["Country"].dropna().unique())
+
+selected_countries = st.sidebar.multiselect(
+    "Select countries",
+    options=countries,
+    default=countries
+)
+
+# ---------- SUBSCRIPTION DATE RANGE FILTER ----------
+st.sidebar.subheader("📅 Subscription Date Range")
+
+valid_dates = df["Subscription Date"].dropna()
+
+if not valid_dates.empty:
+    min_date = valid_dates.min().date()
+    max_date = valid_dates.max().date()
+
+    selected_dates = st.sidebar.date_input(
+        "Select date range",
+        value=(min_date, max_date),
+        min_value=min_date,
+        max_value=max_date,
+        key="subscription_date_range"
+    )
+else:
+    selected_dates = ()
+    
+# Customer / Company search
+
+# ---------- ADVANCED CUSTOMER SEARCH ----------
+search = st.sidebar.text_input(
+    "🔎 Search customers",
+    placeholder="Name, email, company, city...",
+    key="advanced_customer_search"
+)
+
+# Apply country filter first
+filtered = df[df["Country"].isin(selected_countries)].copy()
+
+# Apply subscription date filter
+if isinstance(selected_dates, (tuple, list)) and len(selected_dates) == 2:
+    start_date, end_date = selected_dates
+
+    filtered = filtered[
+        filtered["Subscription Date"].dt.date.between(
+            start_date,
+            end_date
+        )
+    ].copy()
+    
+# Search across multiple customer fields
+if search.strip():
+    search_columns = [
+        "First Name",
+        "Last Name",
+        "Email",
+        "Company",
+        "City",
+        "Country"
+    ]
+
+    search_text = (
+        filtered[search_columns]
+        .fillna("")
+        .astype(str)
+        .agg(" ".join, axis=1)
+    )
+
+    filtered = filtered[
+        search_text.str.contains(
+            search.strip(),
+            case=False,
+            regex=False,
+            na=False
+        )
+    ].copy()
+
+st.sidebar.caption(
+    f"Showing {len(filtered)} of {len(df)} customers"
+)
+
+# ---------- PROFESSIONAL BUSINESS OVERVIEW ----------
+
+# ---------- DYNAMIC KPI DASHBOARD ----------
 st.subheader("📌 Business Overview")
 
-c1, c2, c3, c4 = st.columns(4)
+# Use the filtered data from the sidebar
+total_customers = len(filtered)
+total_countries = filtered["Country"].nunique()
+total_companies = filtered["Company"].nunique()
+total_cities = filtered["City"].nunique()
 
-c1.metric("Total Customers", f"{len(filtered):,}")
-c2.metric("Countries", filtered["Country"].nunique())
-c3.metric("Companies", filtered["Company"].nunique())
-c4.metric("Cities", filtered["City"].nunique())
+valid_subscriptions = (
+    filtered["Subscription Date"].notna().sum()
+)
+
+k1, k2, k3, k4, k5 = st.columns(5)
+
+with k1:
+    st.metric(
+        "👥 Customers",
+        f"{total_customers:,}"
+    )
+
+with k2:
+    st.metric(
+        "🌍 Countries",
+        f"{total_countries:,}"
+    )
+
+with k3:
+    st.metric(
+        "🏢 Companies",
+        f"{total_companies:,}"
+    )
+
+with k4:
+    st.metric(
+        "🏙️ Cities",
+        f"{total_cities:,}"
+    )
+
+with k5:
+    st.metric(
+        "📅 Valid Subscriptions",
+        f"{valid_subscriptions:,}"
+    )
 
 st.caption(
-    f"Showing {len(filtered):,} of {len(df):,} total customer records."
+    "All KPIs update automatically based on your selected "
+    "countries and customer search."
 )
 
 st.divider()
-
 
 # ---------- INTERACTIVE CHARTS ----------
 st.subheader("📊 Customer Data Visualization")
@@ -539,8 +399,100 @@ with right:
 st.divider()
 
 
+# ---------- INTERACTIVE PIE / DONUT CHART ----------
+st.divider()
+st.header("🍩 Interactive Customer Distribution")
 
-# ---------- PROFESSIONAL CUSTOMER INSIGHTS ----------
+st.write(
+    "Explore the distribution of customers across countries."
+)
+
+if filtered.empty:
+    st.info("No customer records match your current filters.")
+
+else:
+    # Count customers by country
+    country_counts = (
+        filtered["Country"]
+        .fillna("Unknown")
+        .value_counts()
+    )
+
+    # Show top 7 countries and group the rest as Other
+    if len(country_counts) > 8:
+        chart_counts = country_counts.head(7).copy()
+        chart_counts["Other Countries"] = (
+            country_counts.iloc[7:].sum()
+        )
+    else:
+        chart_counts = country_counts
+
+    # Let the user choose chart style
+    chart_style = st.radio(
+        "Choose chart style",
+        ["Pie Chart", "Donut Chart"],
+        horizontal=True,
+        key="customer_distribution_style"
+    )
+
+    hole_size = 0.0 if chart_style == "Pie Chart" else 0.5
+
+    # Create interactive chart
+    fig = px.pie(
+        names=chart_counts.index,
+        values=chart_counts.values,
+        title="Customer Share by Country",
+        hole=hole_size
+    )
+
+    fig.update_traces(
+        textposition="inside",
+        textinfo="percent",
+        hovertemplate=(
+            "<b>%{label}</b><br>"
+            "Customers: %{value}<br>"
+            "Share: %{percent}"
+            "<extra></extra>"
+        )
+    )
+
+    fig.update_layout(
+        legend_title_text="Country",
+        margin=dict(t=60, b=20, l=20, r=20)
+    )
+
+    st.plotly_chart(
+        fig,
+        use_container_width=True
+    )
+
+    st.caption(
+        "The chart updates according to your selected countries "
+        "and customer search."
+    )
+
+# Subscription date insights
+df["Subscription Date"] = pd.to_datetime(
+    df["Subscription Date"], errors="coerce"
+)
+
+valid_dates = df["Subscription Date"].dropna()
+
+if not valid_dates.empty:
+    latest_date = valid_dates.max()
+    earliest_date = valid_dates.min()
+
+    st.write(f"📅 Earliest subscription: {earliest_date.date()}")
+    st.write(f"📅 Latest subscription: {latest_date.date()}")
+
+    monthly_subscriptions = (
+        valid_dates.dt.to_period("M").value_counts().sort_index()
+    )
+
+    st.write("📈 Monthly subscription counts")
+    st.bar_chart(monthly_subscriptions)
+    
+    # ---------- PROFESSIONAL CUSTOMER INSIGHTS ----------
 st.subheader("💡 Business Insights")
 
 if filtered.empty:
@@ -585,7 +537,10 @@ else:
             st.write(f"**Valid subscription dates:** {len(valid_dates)}")
             st.write(f"**First subscription:** {valid_dates.min().date()}")
             st.write(f"**Latest subscription:** {valid_dates.max().date()}")
-            st.write(f"**Busiest month:** {monthly_counts.idxmax()}")
+            st.write(
+    f"**Busiest month:** "
+    f"{monthly_counts.idxmax().strftime('%B %Y')}"
+)
             st.write(
                 f"**Subscriptions in busiest month:** "
                 f"{int(monthly_counts.max())}"
@@ -597,6 +552,116 @@ else:
         "Insights are calculated from the selected customer records "
         "using Python. They are not AI-generated predictions."
     )
+
+
+# ---------- CUSTOMER SEGMENTATION ----------
+st.divider()
+st.header("👥 Customer Segmentation")
+
+st.write(
+    "Analyze customers by country, company, or subscription period."
+)
+
+# Select segmentation method
+segment_type = st.selectbox(
+    "Choose segmentation type",
+    [
+        "Country",
+        "Company",
+        "Subscription Period"
+    ],
+    key="customer_segment_type"
+)
+
+if filtered.empty:
+    st.info("No customer records match your current filters.")
+
+elif segment_type == "Country":
+    segment_counts = (
+        filtered["Country"]
+        .fillna("Unknown")
+        .value_counts()
+        .head(10)
+    )
+
+    st.subheader("🌍 Customers by Country")
+    st.bar_chart(segment_counts)
+
+    st.dataframe(
+        segment_counts.rename_axis("Country")
+        .reset_index(name="Customer Count"),
+        hide_index=True,
+        use_container_width=True
+    )
+
+elif segment_type == "Company":
+    segment_counts = (
+        filtered["Company"]
+        .fillna("Unknown")
+        .value_counts()
+        .head(10)
+    )
+
+    st.subheader("🏢 Customers by Company")
+    st.bar_chart(segment_counts)
+
+    st.dataframe(
+        segment_counts.rename_axis("Company")
+        .reset_index(name="Customer Count"),
+        hide_index=True,
+        use_container_width=True
+    )
+
+elif segment_type == "Subscription Period":
+    dates = filtered["Subscription Date"].dropna()
+
+    if dates.empty:
+        st.info("No valid subscription dates are available.")
+    else:
+        today = pd.Timestamp.today().normalize()
+
+        # Divide records into three date-based groups
+        segment_labels = [
+            "Older: before 1 year",
+            "Recent: within 1 year",
+            "Future-dated subscriptions"
+        ]
+
+        conditions = [
+            dates < (today - pd.DateOffset(years=1)),
+            (dates >= (today - pd.DateOffset(years=1)))
+            & (dates <= today),
+            dates > today
+        ]
+
+        segment_data = pd.Series(
+            "Unclassified",
+            index=dates.index,
+            dtype="object"
+        )
+
+        for condition, label in zip(conditions, segment_labels):
+            segment_data.loc[condition] = label
+
+        segment_counts = (
+            segment_data.value_counts()
+            .reindex(segment_labels, fill_value=0)
+        )
+
+        st.subheader("📅 Customers by Subscription Period")
+        st.bar_chart(segment_counts)
+
+        st.dataframe(
+            segment_counts.rename_axis("Subscription Period")
+            .reset_index(name="Customer Count"),
+            hide_index=True,
+            use_container_width=True
+        )
+
+st.caption(
+    "Segmentation is based on the currently filtered customer records. "
+    "It describes the dataset; it does not predict customer behavior."
+)
 
 # ---------- CUSTOMER DATA CHAT ASSISTANT ----------
 st.subheader("💬 Customer Data Chat Assistant")
@@ -722,10 +787,52 @@ if question:
 
 st.divider()
 
+# ---------- COLUMN SELECTOR & DATA EXPLORER ----------
 
+st.divider()
+st.subheader("🔎 Column Selector & Data Explorer")
+
+if filtered.empty:
+    st.info("No customer records match the current filters.")
+else:
+    available_columns = filtered.columns.tolist()
+
+    default_columns = [
+        col for col in [
+            "First Name",
+            "Last Name",
+            "Email",
+            "Country",
+            "City",
+            "Company",
+            "Subscription Date"
+        ]
+        if col in available_columns
+    ]
+
+    selected_columns = st.multiselect(
+        "Choose columns to display",
+        options=available_columns,
+        default=default_columns,
+        key="customer_display_columns"
+    )
+
+    if selected_columns:
+        st.dataframe(
+            filtered[selected_columns],
+            use_container_width=True,
+            hide_index=True
+        )
+
+        st.caption(
+            f"Displaying {len(selected_columns)} columns "
+            f"and {len(filtered):,} customer records."
+        )
+    else:
+        st.warning("Please select at least one column.")
+        
 # ---------- CUSTOMER RECORDS ----------
 st.subheader("👥 Customer Records")
-
 st.dataframe(
     filtered,
     width="stretch",
@@ -741,4 +848,234 @@ st.download_button(
 )
 
 
+# ---------- EXCEL EXPORT ----------
+import io
+
+excel_buffer = io.BytesIO()
+
+with pd.ExcelWriter(
+    excel_buffer,
+    engine="openpyxl"
+) as writer:
+    filtered.to_excel(
+        writer,
+        index=False,
+        sheet_name="Customer Records"
+    )
+
+st.download_button(
+    label="📊 Download Filtered Excel",
+    data=excel_buffer.getvalue(),
+    file_name="filtered_customers.xlsx",
+    mime=(
+        "application/vnd.openxmlformats-officedocument."
+        "spreadsheetml.sheet"
+    ),
+    key="download_filtered_excel"
+)
+
 st.caption("Customer Data Analysis Dashboard • Built with Python, Pandas, Matplotlib and Streamlit")
+
+# Data Cleaning Section
+
+st.header("🧹 Data Cleaning")
+
+st.write("Check and clean missing values and duplicate rows.")
+
+cleaned_df = df.copy()
+
+col1, col2 = st.columns(2)
+
+with col1:
+    st.write("Missing values:", cleaned_df.isnull().sum().sum())
+
+with col2:
+    st.write("Duplicate rows:", cleaned_df.duplicated().sum())
+
+if st.button("Clean Dataset"):
+    cleaned_df = cleaned_df.drop_duplicates()
+    cleaned_df = cleaned_df.dropna()
+
+    st.success("Dataset cleaned successfully!")
+
+    st.write("Rows after cleaning:", len(cleaned_df))
+
+    csv_data = cleaned_df.to_csv(index=False).encode("utf-8")
+
+    st.download_button(
+        label="Download Cleaned Dataset",
+        data=csv_data,
+        file_name="cleaned_customer_data.csv",
+        mime="text/csv"
+    )
+    
+    
+# ---------- DATA VALIDATION & CLEANING PREVIEW ----------
+
+st.divider()
+st.subheader("🧹 Data Validation & Cleaning Preview")
+
+if filtered.empty:
+    st.info("No customer records available for validation.")
+else:
+    missing_cells = int(filtered.isnull().sum().sum())
+    duplicate_rows = int(filtered.duplicated().sum())
+
+    preview_df = filtered.drop_duplicates().dropna()
+    removed_rows = len(filtered) - len(preview_df)
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        st.metric("Missing Cells", f"{missing_cells:,}")
+
+    with col2:
+        st.metric("Duplicate Rows", f"{duplicate_rows:,}")
+
+    with col3:
+        st.metric("Rows After Cleaning", f"{len(preview_df):,}")
+
+    st.write("**Missing values by column**")
+    missing_by_column = filtered.isnull().sum()
+    missing_by_column = missing_by_column[missing_by_column > 0]
+
+    if missing_by_column.empty:
+        st.success("No missing values found in the filtered data.")
+    else:
+        st.dataframe(
+            missing_by_column.rename("Missing Values").to_frame(),
+            use_container_width=True
+        )
+
+    st.write("**Cleaning preview**")
+    st.caption(
+        f"Potential rows removed by dropping duplicates and "
+        f"rows containing missing values: {removed_rows:,}"
+    )
+
+    st.dataframe(
+        preview_df.head(10),
+        use_container_width=True,
+        hide_index=True
+    )
+
+    # Download Business Insights Report
+
+st.subheader("Download Business Insights Report")
+
+country_counts = df["Country"].value_counts()
+city_counts = df["City"].value_counts()
+
+report = f"""
+CUSTOMER DATA ANALYSIS REPORT
+=============================
+
+Total Customers/Records: {len(df)}
+Total Unique Countries: {df['Country'].nunique()}
+Total Unique Cities: {df['City'].nunique()}
+
+Top Country:
+{country_counts.idxmax() if not country_counts.empty else 'No data'}
+
+Top City:
+{city_counts.idxmax() if not city_counts.empty else 'No data'}
+"""
+
+st.download_button(
+    label="Download Insights Report",
+    data=report,
+    file_name="customer_analysis_report.txt",
+    mime="text/plain"
+)
+
+# Country-wise Customer Analysis
+st.subheader("Customers by Country")
+
+country_counts = df["Country"].value_counts().head(10)
+
+st.bar_chart(country_counts)
+
+# City-wise Customer Analysis
+st.subheader("Top 10 Cities by Customers")
+
+city_counts = df["City"].value_counts().head(10)
+
+st.bar_chart(city_counts)
+
+# Business Insights
+
+st.header("💡 Business Insights")
+
+# Customer Analysis - Key Findings
+
+st.header("🔍 Customer Analysis & Key Findings")
+
+# Country Analysis
+country_counts = df["Country"].value_counts()
+
+if not country_counts.empty:
+    top_country = country_counts.idxmax()
+    top_country_count = country_counts.max()
+    country_percentage = (top_country_count / len(df)) * 100
+
+    st.subheader("🌍 Country Analysis")
+
+    col1, col2 = st.columns(2)
+
+    col1.metric("Leading Country", top_country)
+    col2.metric("Records in Leading Country", top_country_count)
+
+    st.write(
+        f"{country_percentage:.2f}% of all records "
+        f"belong to {top_country}."
+    )
+
+    st.bar_chart(country_counts.head(10))
+
+# City Analysis
+city_counts = df["City"].value_counts()
+
+if not city_counts.empty:
+    top_city = city_counts.idxmax()
+    top_city_count = city_counts.max()
+
+    st.subheader("🏙️ City Analysis")
+
+    col1, col2 = st.columns(2)
+
+    col1.metric("Leading City", top_city)
+    col2.metric("Records in Leading City", top_city_count)
+
+    st.bar_chart(city_counts.head(10))
+
+# Country with maximum customers
+country_counts = df["Country"].value_counts()
+
+if not country_counts.empty:
+    top_country = country_counts.index[0]
+    top_count = country_counts.iloc[0]
+
+    st.success(
+        f"Most customers are from {top_country} "
+        f"({top_count} customers)."
+    )
+
+# ---------- CUSTOM DESIGN ----------
+st.markdown("""
+<style>
+.block-container {
+    padding-top: 1.5rem;
+    padding-bottom: 2rem;
+}
+[data-testid="stMetric"] {
+    background: var(--secondary-background-color);
+    padding: 18px;
+    border-radius: 12px;
+    border: 1px solid rgba(128,128,128,0.2);
+}
+</style>
+""", unsafe_allow_html=True)
+
+st.divider()
+
+
